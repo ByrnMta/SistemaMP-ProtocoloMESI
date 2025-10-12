@@ -9,11 +9,27 @@ PE::PE(int id)
     for (int i = 0; i < 8; ++i) registers_[i] = 0.0;
 }
 
-// Carga el vector de instrucciones (en string)
+// Carga el vector de instrucciones (en string) y construye el mapa de etiquetas
 void PE::load_instructions(const std::vector<std::string>& instructions) {
     std::lock_guard<std::mutex> lock(mtx_);
     instructions_ = instructions;
     pc_ = 0;
+    build_label_map();
+}
+
+// Construye el mapa de etiquetas (labels) a índices de instrucción
+void PE::build_label_map() {
+    label_map_.clear();
+    for (size_t i = 0; i < instructions_.size(); ++i) {
+        std::string instr = instructions_[i];
+        // Quita espacios al inicio
+        instr.erase(0, instr.find_first_not_of(" \t"));
+        // Si termina con ':' es una etiqueta
+        if (!instr.empty() && instr.back() == ':') {
+            std::string label = instr.substr(0, instr.size() - 1);
+            label_map_[label] = i;
+        }
+    }
 }
 
 // Inicia la ejecución del PE en un hilo separado
@@ -28,6 +44,7 @@ void PE::join() {
     }
 }
 
+// Devuelve el ID del PE
 int PE::get_id() const {
     return id_;
 }
@@ -40,15 +57,43 @@ void PE::print_registers() const {
     }
 }
 
-// Bucle principal de ejecución del PE: fetch-decode-execute
+// Bucle principal de ejecución del PE: fetch-decode-execute con soporte de saltos
 void PE::run() {
     std::unique_lock<std::mutex> lock(mtx_);
     std::cout << "[PE " << id_ << "] Iniciando ejecución...\n";
     while (pc_ < instructions_.size()) {
         std::string instr_str = instructions_[pc_];
+        // Si es una etiqueta, solo avanza
+        std::string trimmed = instr_str;
+        trimmed.erase(0, trimmed.find_first_not_of(" \t"));
+        if (!trimmed.empty() && trimmed.back() == ':') {
+            ++pc_;
+            continue;
+        }
         Instruction instr = parse_instruction(instr_str);
         std::cout << "[PE " << id_ << "] Ejecutando: " << instr_str << std::endl;
-        execute_instruction(instr);
+        // Lógica de salto para JNZ
+        if (instr.type == Instruction::JNZ) {
+            // Por convención, REG3 es el registro de control de bucle
+            int reg_cond = 3;
+            if (reg_cond >= 0 && reg_cond < 8 && registers_[reg_cond] != 0) {
+                // Salta a la etiqueta si existe
+                auto it = label_map_.find(instr.label);
+                if (it != label_map_.end()) {
+                    pc_ = it->second;
+                    print_registers();
+                    // Simula retardo de ciclo
+                    lock.unlock();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    lock.lock();
+                    continue;
+                } else {
+                    std::cout << "[PE " << id_ << "] Error: etiqueta '" << instr.label << "' no encontrada" << std::endl;
+                }
+            }
+        } else {
+            execute_instruction(instr);
+        }
         print_registers();
         ++pc_;
         // Simula retardo de ciclo
@@ -61,13 +106,18 @@ void PE::run() {
     cv_.notify_all();
 }
 
-// Parser simple de instrucciones (solo para pruebas iniciales)
+// Parser mejorado: ignora etiquetas y maneja operandos
 Instruction PE::parse_instruction(const std::string& instr_str) {
     Instruction instr;
     instr.type = Instruction::INVALID;
     std::istringstream iss(instr_str);
     std::string op;
     iss >> op;
+    // Ignora etiquetas
+    if (!op.empty() && op.back() == ':') {
+        instr.type = Instruction::INVALID;
+        return instr;
+    }
     if (op == "LOAD") {
         std::string reg, addr;
         iss >> reg >> addr;

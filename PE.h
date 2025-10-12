@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <queue>
 #include <thread>
+#include <unordered_map>
 
 /**
  * @brief Clase que modela un Processing Element (PE) en un sistema multiprocesador.
@@ -82,12 +83,20 @@ private:
      */
     void execute_instruction(const Instruction& instr);
 
+    /**
+     * @brief Procesa las etiquetas (labels) y construye el mapa de saltos.
+     */
+    void build_label_map();
+
     int id_;  // Identificador del PE
     std::vector<std::string> instructions_; // Instrucciones a ejecutar (en string)
     size_t pc_; // Program counter (índice de la instrucción actual)
 
     // Banco de registros (8 registros de 64 bits, REG0–REG7)
     double registers_[8] = {0};
+
+    // Mapa de etiquetas a índice de instrucción
+    std::unordered_map<std::string, size_t> label_map_;
 
     // Sincronización para ejecución en hilo
     std::thread thread_;
