@@ -19,5 +19,5 @@ struct CacheLine {
     MESIState mesi = MESIState::INVALID;  // cada linea de caché comienza con un estado inválido
     bool dirty = false;           // Write-back
     bool valid = false;           // Línea válida
-    uint8_t lru_counter = 0;      // Para LRU
+    uint16_t lru_counter = 0;      // Para LRU
 };

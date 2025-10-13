@@ -11,11 +11,11 @@ public:
     array<CacheLine, NUM_WAYS> lines; // Las líneas de caché en este set (2 líneas)
 
     // Busca una línea por tag, retorna índice o nullopt
-    optional<uint8_t> find_line(uint8_t tag) const;
+    optional<uint8_t> find_line(uint8_t tag);
 
     // Encuentra línea a reemplazar (LRU)
-    int get_replacement_index() const;
+    uint8_t get_replacement_index();
 
     // Actualiza LRU
-    void update_lru(int accessed_idx);
+    void update_lru(uint8_t accessed_idx);
 };
