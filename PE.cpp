@@ -82,10 +82,6 @@ void PE::run() {
                 if (it != label_map_.end()) {
                     pc_ = it->second;
                     print_registers();
-                    // Simula retardo de ciclo
-                    lock.unlock();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    lock.lock();
                     continue;
                 } else {
                     std::cout << "[PE " << id_ << "] Error: etiqueta '" << instr.label << "' no encontrada" << std::endl;
@@ -96,10 +92,6 @@ void PE::run() {
         }
         print_registers();
         ++pc_;
-        // Simula retardo de ciclo
-        lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        lock.lock();
     }
     finished_ = true;
     std::cout << "[PE " << id_ << "] Ejecución finalizada.\n";
@@ -194,8 +186,7 @@ void PE::execute_instruction(const Instruction& instr) {
                 registers_[instr.reg_dest] -= 1.0;
             break;
         case Instruction::JNZ:
-            // Simulación: no implementa saltos reales aún
-            std::cout << "[PE " << id_ << "] JNZ simulado (no implementado)" << std::endl;
+            // La lógica de salto está en run(), aquí no se hace nada
             break;
         default:
             std::cout << "[PE " << id_ << "] Instrucción inválida o no soportada" << std::endl;
