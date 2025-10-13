@@ -23,6 +23,9 @@ public:
     optional<uint8_t> write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria);
     optional<uint8_t> write_data_linea_cache(uint16_t address, double data_to_write);
 
+    // Métodos para cambiar el estado MESI de una línea
+    bool update_linea_cache_mesi(uint16_t address, MESIState new_state);
+
     // Métodos auxiliares
     uint8_t get_tag(uint16_t address);
     uint8_t get_set_index(uint16_t address);

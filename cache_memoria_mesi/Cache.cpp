@@ -125,7 +125,40 @@ optional<uint8_t> Cache::find_line(uint16_t address) {
     return set.find_line(tag);  // regresa el índice de la línea (0 o 1) o nullopt
 }
 
-// Metodo para imprimir el contenido de la cache (para debug)
+// Método para actualizar el estado MESI de una línea de caché dada una dirección
+bool Cache::update_linea_cache_mesi(uint16_t address, MESIState new_state){
+
+    // Se obtiene el indice del set al que corresponde la dirección
+    uint8_t set_index = get_set_index(address);
+
+    // Se obtiene la etiqueta del bloque al que corresponde la dirección
+    uint8_t tag = get_tag(address);
+
+    // Se obtiene el set correspondiente a esa dirección de memoria
+    auto& set = sets[set_index];
+
+    auto indice_linea_encontrada = set.find_line(tag);
+
+    if (indice_linea_encontrada != nullopt) {
+
+        if (new_state == MESIState::INVALID) {
+            // Si el nuevo estado es INVALID, marcar la línea como inválida
+            set.lines[*indice_linea_encontrada].valid = false;
+            set.lines[*indice_linea_encontrada].dirty = false; // También se puede considerar que ya no está sucia
+        }
+
+        // Se actualiza el estado MESI de la línea de caché
+        set.lines[*indice_linea_encontrada].mesi = new_state;
+
+        return true; // Estado actualizado exitosamente
+
+    } else {
+        // Si no se encuentra la línea, se retorna false
+        return false; // Línea no encontrada
+    }
+}
+
+// Método para imprimir el contenido de la cache (para debug)
 void Cache::print_cache_content() {
     for (int i = 0; i < NUM_SETS; ++i) {
         cout << "Set " << i << ":\n";
