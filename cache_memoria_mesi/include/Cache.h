@@ -15,11 +15,13 @@ public:
 
     // Sets de la caché (2-ways asociativa)
     array<CacheSet, NUM_SETS> sets;
+    
+    // Lee una línea completa de la caché
+    optional<array<double, 4>> read_linea_cache(uint16_t address);
+    // Lee un dato individual en la caché
+    optional<double> read_data_linea_cache(uint16_t address);
 
-    // Lee datos de la caché
-    optional<double> read(uint16_t address);
-
-    // Método para reemplazar una linea de caché
+    // Método para reemplazar una linea de caché y escribir un dato individual en la caché
     optional<uint8_t> write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria);
     optional<uint8_t> write_data_linea_cache(uint16_t address, double data_to_write);
 

@@ -24,27 +24,55 @@ uint8_t Cache::get_block_offset(uint16_t address) {
     return (address >> 3) & 0x3;
 }
 
-// Método para leer datos de la caché
-optional<double> Cache::read(uint16_t address) {
-    // Se obtiene el índice del set al que corresponde la dirección
+// Método para leer una linea de caché completa
+optional<array<double, 4>> Cache::read_linea_cache(uint16_t address) {
+
+    // Se obtiene el índice del set al que corresponde la dirección (de 0 a 7)
     uint8_t set_index = get_set_index(address);
 
-    // Se obtiene la etiqueta del bloque al que corresponde la dirección
+    // Se obtiene la etiqueta del bloque al que corresponde la dirección (de 0 a 15 (solo tiene sentido dentro del set))
     uint8_t tag = get_tag(address);
 
-    // Se obtiene el offset dentro del bloque
-    uint8_t offset = get_block_offset(address);
-
-    // Acceder al conjunto correspondiente
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
 
-    // Buscar la línea en el conjunto
-    auto indice_linea_encontrado = set.find_line(tag);
+    // Se busca la línea en el set (se obtiene un indice (0 o 1) o nullopt)
+    auto indice_linea_encontrada = set.find_line(tag);
 
-    if (indice_linea_encontrado != nullopt) {
+    if (indice_linea_encontrada != nullopt) {
         // Hit
-        set.update_lru(*indice_linea_encontrado); // se incrementa el lru_counter de la linea en cuestión (pues se acaba de acceder a ella)
-        auto dato_leido = set.lines[*indice_linea_encontrado].linea_cache[offset];
+        set.update_lru(*indice_linea_encontrada); // se incrementa el lru_counter de la linea en cuestión (pues se acaba de acceder a ella)
+        auto linea_leida = set.lines[*indice_linea_encontrada].linea_cache;
+
+        return linea_leida; // Se retorna la línea leída
+
+    } else {
+        // Se retorna un nullopt si no se pudo encontrar la línea (miss) o si la línea no es válida para leer
+        return nullopt;
+    }
+}
+
+// Método para leer un dato individual en una linea de caché
+optional<double> Cache::read_data_linea_cache(uint16_t address) {
+    // Se obtiene el índice del set al que corresponde la dirección (de 0 a 7)
+    uint8_t set_index = get_set_index(address);
+
+    // Se obtiene la etiqueta del bloque al que corresponde la dirección (de 0 a 15 (solo tiene sentido dentro del set))
+    uint8_t tag = get_tag(address);
+
+    // Se obtiene el offset dentro del bloque (offset puede ir de 0 a 3)
+    uint8_t offset = get_block_offset(address);
+
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
+    auto& set = sets[set_index];
+
+    // Se busca la línea en el set (se obtiene un indice (0 o 1) o nullopt)
+    auto indice_linea_encontrada = set.find_line(tag);
+
+    if (indice_linea_encontrada != nullopt) {
+        // Hit
+        set.update_lru(*indice_linea_encontrada); // se incrementa el lru_counter de la linea en cuestión (pues se acaba de acceder a ella)
+        auto dato_leido = set.lines[*indice_linea_encontrada].linea_cache[offset];
 
         return dato_leido; // Se retorna el dato leído
 
@@ -62,7 +90,7 @@ optional<uint8_t> Cache::write_linea_cache(uint16_t address, array<double,4>& li
     // Se obtiene la etiqueta del bloque al que corresponde la dirección
     uint8_t tag = get_tag(address);
 
-    // Se obtiene el set correspondiente a esa dirección de memoria
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
 
     // Se obtiene el índice de la línea a reemplazar (0 o 1)
@@ -75,26 +103,26 @@ optional<uint8_t> Cache::write_linea_cache(uint16_t address, array<double,4>& li
     set.lines[indice_linea_reemplazar].tag = tag;
     set.lines[indice_linea_reemplazar].valid = true;
     set.lines[indice_linea_reemplazar].dirty = false;
-    set.lines[indice_linea_reemplazar].lru_counter = 0;
+    set.update_lru(indice_linea_reemplazar); // se incrementa el lru_counter de la linea, acaba de entrar
 
     return indice_linea_reemplazar; // Se retorna el índice de la línea usada (0 o 1)
 }
 
-// Método para escribir datos en la caché
+// Método para escribir un dato individual en una linea de caché
 optional<uint8_t> Cache::write_data_linea_cache(uint16_t address, double data_to_write) {
-    // Se obtiene el indice del set al que corresponde la dirección
+    // Se obtiene el indice del set al que corresponde la dirección (de 0 a 7)
     uint8_t set_index = get_set_index(address);
 
-    // Se obtiene la etiqueta del bloque al que corresponde la dirección
+    // Se obtiene la etiqueta del bloque al que corresponde la dirección (de 0 a 15 (solo tiene sentido dentro del set))
     uint8_t tag = get_tag(address);
 
-    // Obtener el offset dentro del bloque
+    // Obtener el offset dentro del bloque (offset puede ir de 0 a 3)
     uint8_t offset = get_block_offset(address);
 
-    // Se obtiene el set correspondiente a esa dirección de memoria
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
 
-    // Buscar la línea en el set (se obtiene un indice (0 o 1) o nullopt)
+    // Se busca la línea en el set (se obtiene un indice (0 o 1) o nullopt)
     auto indice_linea_encontrada = set.find_line(tag);
 
     // En caso de que se haya encontrado la línea (hit)
@@ -120,23 +148,26 @@ optional<uint8_t> Cache::find_line(uint16_t address) {
 
     // Obtener la etiqueta de la dirección
     uint8_t tag = get_tag(address);
-   
+    
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
+
     return set.find_line(tag);  // regresa el índice de la línea (0 o 1) o nullopt
 }
 
 // Método para actualizar el estado MESI de una línea de caché dada una dirección
 bool Cache::update_linea_cache_mesi(uint16_t address, MESIState new_state){
 
-    // Se obtiene el indice del set al que corresponde la dirección
+    /// Se obtiene el indice del set al que corresponde la dirección (de 0 a 7)
     uint8_t set_index = get_set_index(address);
 
-    // Se obtiene la etiqueta del bloque al que corresponde la dirección
+    // Se obtiene la etiqueta del bloque al que corresponde la dirección (de 0 a 15 (solo tiene sentido dentro del set))
     uint8_t tag = get_tag(address);
 
-    // Se obtiene el set correspondiente a esa dirección de memoria
+    // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
 
+    // Se busca la línea en el set (se obtiene un indice (0 o 1) o nullopt)
     auto indice_linea_encontrada = set.find_line(tag);
 
     if (indice_linea_encontrada != nullopt) {
