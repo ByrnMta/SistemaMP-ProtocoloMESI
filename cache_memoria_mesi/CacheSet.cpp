@@ -6,17 +6,18 @@
 using namespace std;
 
 optional<uint8_t> CacheSet::find_line(uint8_t tag) {
-    // Busca la línea con el tag dado (solo hay dos lineas por set en este momento de 16 bloques posibles)
+    // Se busca la línea con el tag dado (solo hay dos lineas por set en este momento de 16 bloques posibles)
     for (int i = 0; i < NUM_WAYS; ++i) {
+        // Se verifica si la linea buscada es válida y si la etiqueta coincide
         if (lines[i].valid && lines[i].tag == tag) {
-            return i; // regresa el indice en el set de la linea encontrada si es válido
+            return i; // regresa el indice en el set de la linea encontrada si es válida
         }
     }
     return nullopt;
 }
 
 uint8_t CacheSet::get_replacement_index() {
-    // Busca línea inválida primero
+    // Se busca la línea inválida primero
     for (int i = 0; i < NUM_WAYS; ++i) {
         if (!lines[i].valid) {
             return i;

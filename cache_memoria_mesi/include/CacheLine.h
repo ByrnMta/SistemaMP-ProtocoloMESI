@@ -14,6 +14,7 @@ enum class MESIState : uint8_t {
 
 // Estructura que representa una línea de caché
 struct CacheLine {
+    uint16_t direccion_bloque = 0; // Dirección del bloque en memoria principal (puede ser cualquier dirección de un dato que esté dentro del bloque)
     array<double,  4> linea_cache; // 32 bytes por línea (4 datos de 8 bytes)
     uint8_t tag = 0;             // Etiqueta
     MESIState mesi = MESIState::INVALID;  // cada linea de caché comienza con un estado inválido

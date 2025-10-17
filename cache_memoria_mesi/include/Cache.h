@@ -9,7 +9,7 @@ using namespace std;
 class Cache {
 public:
     static constexpr int NUM_SETS = 8;
-    static constexpr int BLOCK_SIZE = 32; // bytes
+    static constexpr int BLOCK_SIZE = 4; // 4 datos por bloque (8 bytes cada dato)
     static constexpr int NUM_BLOCKS = 16;
     static constexpr int NUM_WAYS = 2;
 
@@ -22,7 +22,7 @@ public:
     optional<double> read_data_linea_cache(uint16_t address);
 
     // Método para reemplazar una linea de caché y escribir un dato individual en la caché
-    optional<uint8_t> write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria);
+    optional<CacheLine> write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria);
     optional<uint8_t> write_data_linea_cache(uint16_t address, double data_to_write);
 
     // Métodos para cambiar el estado MESI de una línea

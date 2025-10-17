@@ -12,18 +12,41 @@ Memoria::Memoria() {
     inicializar_memoria(nombre_archivo_inicializar_memoria);
 }
 
-double Memoria::leer(size_t direccion) const {
+array<double, 4> Memoria::read_bloque(size_t direccion) const {
 	if (direccion >= size_memoria) {
 		throw out_of_range("Direccion de memoria fuera de rango");
 	}
-	return memoria_principal[direccion];
+	
+    // Se obtiene el número de bloque (la memoria principal puede verse como 128 bloques de 4 datos cada uno)
+    int num_bloque = direccion / 4;  // de 0 a 127
+
+    // Se obtiene la dirección inicial o base del bloque a buscar
+    int direccion_base_bloque = num_bloque * 4;
+
+    array<double, 4> bloque_leido;
+
+    // Se buscan los cuatro datos del bloque
+	for (int i = 0; i < 4; ++i) {
+		bloque_leido[i] = memoria_principal[direccion_base_bloque + i];
+	}
+	return bloque_leido;
 }
 
-void Memoria::escribir(size_t direccion, double valor) {
+void Memoria::write_bloque(size_t direccion, array<double, 4> bloque) {
 	if (direccion >= size_memoria) {
 		throw out_of_range("Direccion de memoria fuera de rango");
 	}
-	memoria_principal[direccion] = valor;
+
+    // Se obtiene el número de bloque (la memoria principal puede verse como 128 bloques de 4 datos cada uno)
+    int num_bloque = direccion / 4;  // de 0 a 127
+
+    // Se obtiene la dirección inicial o base del bloque a buscar
+    int direccion_base_bloque = num_bloque * 4;
+
+	// Se escriben los datos en el bloque (write-back)
+	for (int i = 0; i < 4; ++i) {
+		memoria_principal[direccion_base_bloque + i] = bloque[i];
+	}
 }
 
 // Se inicializa por medio de un .mif

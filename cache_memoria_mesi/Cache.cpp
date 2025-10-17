@@ -19,9 +19,9 @@ uint8_t Cache::get_set_index(uint16_t address) {
 
 // Metodo para obtener el offset (índice de dato) dentro del bloque de una dirección
 uint8_t Cache::get_block_offset(uint16_t address) {
-    // Cada dato es de 8 bytes, bloque de 4 datos = 32 bytes
+    // Cada dato es de 8 bytes (double), bloque de 4 datos
     // Offset = índice del dato dentro del bloque (0 a 3)
-    return (address >> 3) & 0x3;
+    return address % BLOCK_SIZE;
 }
 
 // Método para leer una linea de caché completa
@@ -83,7 +83,7 @@ optional<double> Cache::read_data_linea_cache(uint16_t address) {
 }
 
 // Método para reemplazar una línea de caché completa (localidad espacial y write-allocate)
-optional<uint8_t> Cache::write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria) {
+optional<CacheLine> Cache::write_linea_cache(uint16_t address, array<double,4>& linea_cache_from_memoria) {
     // Se obtiene el índice del set al que corresponde la dirección
     uint8_t set_index = get_set_index(address);
 
@@ -93,23 +93,34 @@ optional<uint8_t> Cache::write_linea_cache(uint16_t address, array<double,4>& li
     // Se obtiene el set correspondiente (objeto CacheSet) a esa dirección de memoria
     auto& set = sets[set_index];
 
-    // Se obtiene el índice de la línea a reemplazar (0 o 1)
+    // Se obtiene el índice de la línea a reemplazar dentro del set actual (0 o 1)
     uint8_t indice_linea_reemplazar = set.get_replacement_index();
 
-    // Se actualiza la línea de caché en el set
+    // objeto CacheLine (se hace una copia pues se va hacer write-back)
+    auto linea_write_back = set.lines[indice_linea_reemplazar];
+
+    // Se actualiza o se reemplaza la línea de caché en el set (la nueva linea)
     set.lines[indice_linea_reemplazar].linea_cache = linea_cache_from_memoria;
 
-    // se actualizan los valores de la línea de caché (pues se volvió a cargar a la caché)
+    // se actualizan los valores de la línea de caché nueva (pues se volvió a cargar a la caché)
     set.lines[indice_linea_reemplazar].tag = tag;
     set.lines[indice_linea_reemplazar].valid = true;
-    set.lines[indice_linea_reemplazar].dirty = false;
+    set.lines[indice_linea_reemplazar].dirty = false; // es igual que en memoria principal
+    set.lines[indice_linea_reemplazar].direccion_bloque = address; // se actualiza la dirección en memoria principal del bloque
     set.update_lru(indice_linea_reemplazar); // se incrementa el lru_counter de la linea, acaba de entrar
 
-    return indice_linea_reemplazar; // Se retorna el índice de la línea usada (0 o 1)
+    // Se retorna la línea que se reemplaza si es que está válida y sucia (para hacer write-back)
+    if (linea_write_back.valid && linea_write_back.dirty) {
+        return linea_write_back;  // objeto CacheLine (se necesita la dirección y la linea de datos para hacer write-back)
+    }
+    else {
+        return nullopt; // No se retorna nada si la línea que se reemplaza es inválida o no está sucia
+    }
 }
 
 // Método para escribir un dato individual en una linea de caché
 optional<uint8_t> Cache::write_data_linea_cache(uint16_t address, double data_to_write) {
+
     // Se obtiene el indice del set al que corresponde la dirección (de 0 a 7)
     uint8_t set_index = get_set_index(address);
 
@@ -136,7 +147,7 @@ optional<uint8_t> Cache::write_data_linea_cache(uint16_t address, double data_to
 
     } else {
         // En caso de que no se haya encontrado la línea (miss)
-        // se retorna un nullopt si no se pudo encontrar la línea (miss)
+        // se retorna un nullopt si no se pudo encontrar la línea
         return nullopt;
     }
 }
