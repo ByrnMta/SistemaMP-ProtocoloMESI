@@ -18,12 +18,13 @@
 // Estructura que representa una instrucción decodificada
 struct Instruction {
     enum Type {
-        LOAD, STORE, FMUL, FADD, INC, DEC, JNZ, INVALID
+        LOAD, STORE, FMUL, FADD, INC, DEC, JNZ, LOADI, INVALID
     } type;
     int reg_dest = -1; // Registro destino
     int reg_src1 = -1; // Registro fuente 1
     int reg_src2 = -1; // Registro fuente 2
     int64_t address = 0; // Dirección de memoria (si aplica)
+    int64_t immediate = 0; // Valor inmediato (para LOADI)
     std::string label; // Etiqueta (para saltos)
 };
 

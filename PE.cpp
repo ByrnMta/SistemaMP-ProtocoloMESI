@@ -70,7 +70,7 @@ void PE::run() {
             ++pc_;
             continue;
         }
-        Instruction instr = parse_instruction(instr_str);
+    Instruction instr = parse_instruction(instr_str);
         std::cout << "[PE " << id_ << "] Ejecutando: " << instr_str << std::endl;
         // Lógica de salto para JNZ
         if (instr.type == Instruction::JNZ) {
@@ -123,6 +123,17 @@ Instruction PE::parse_instruction(const std::string& instr_str) {
             instr.address = std::stoll(addr.substr(0, addr.find(",")));
         else
             instr.address = 0;
+    } else if (op == "LOADI") {
+        // LOADI REGx, valor_inmediato
+        std::string reg, imm;
+        iss >> reg >> imm;
+        instr.type = Instruction::LOADI;
+        instr.reg_dest = std::stoi(reg.substr(reg.find_first_of("0123456789")));
+        // Soporta decimal o hexadecimal
+        if (imm.find("0x") != std::string::npos)
+            instr.immediate = std::stoll(imm, nullptr, 16);
+        else
+            instr.immediate = std::stoll(imm);
     } else if (op == "STORE") {
         std::string reg, addr;
         iss >> reg >> addr;
@@ -159,6 +170,11 @@ Instruction PE::parse_instruction(const std::string& instr_str) {
 // Ejecuta la instrucción decodificada (solo manipula registros, no memoria real)
 void PE::execute_instruction(const Instruction& instr) {
     switch (instr.type) {
+        case Instruction::LOADI:
+            // Carga un valor inmediato (dirección) en un registro
+            if (instr.reg_dest >= 0 && instr.reg_dest < 8)
+                registers_[instr.reg_dest] = static_cast<double>(instr.immediate);
+            break;
         case Instruction::LOAD:
             // Simulación: carga valor dummy (por ejemplo, la dirección como double)
             if (instr.reg_dest >= 0 && instr.reg_dest < 8)
