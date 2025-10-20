@@ -189,8 +189,12 @@ bool Cache::update_linea_cache_mesi(uint16_t address, MESIState new_state){
             set.lines[*indice_linea_encontrada].dirty = false; // También se puede considerar que ya no está sucia
         }
 
+        cout << "[Cache] Estado Actual de la linea: " << int(set.lines[*indice_linea_encontrada].mesi) << endl;
+
         // Se actualiza el estado MESI de la línea de caché
         set.lines[*indice_linea_encontrada].mesi = new_state;
+
+        cout << "[Cache] Estado actualizado: " << int(set.lines[*indice_linea_encontrada].mesi) << endl;
 
         return true; // Estado actualizado exitosamente
 

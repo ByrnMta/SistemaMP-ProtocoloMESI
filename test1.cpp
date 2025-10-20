@@ -2,6 +2,7 @@
 #include "cache/include/Cache.h"
 #include "Interconnect/interconnect.h"
 #include "MESI/connect_mesi.h"
+#include "cache/include/memoria.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -37,17 +38,23 @@ int main() {
     // Inicializa datos en memoria (caché) SOLO en PE 1
     array<double, 4> datosA = {42.0, 0, 0, 0}; // Valor único para identificar el origen
     array<double, 4> datosB = {51.0, 0, 0, 0};
-    caches[1]->write_linea_cache(0x20, datosA); // Solo PE 1 tiene la línea 0x20
-    //caches[2]->write_linea_cache(0x120, datosB); // Solo PE 1 tiene la línea 0x20
+
+    caches[1]->write_linea_cache(0x00, datosA); // Solo PE 1 tiene la línea 0x00
+    caches[1]->write_linea_cache(0x20, datosB); // Solo PE 1 tiene la línea 0x20
 
     // Programa: PE 0 intentará leer 0x20 (miss local, hit remoto en PE 1)
     
     vector<string> programa_pe0 = {
-        "LOADI REG0, 0x20",        // REG0 = dirección a leer
+        "LOADI REG0, 0x60",        // REG0 = dirección a leer
         "LOAD REG1, [REG0]"        // REG1 = valor leído (debería venir de PE 1)
     };
     vector<string> programa_pe1 = {
         "LOADI REG0, 0x20",        // REG0 = dirección a leer
+        "LOADI REG1, 22",          // REG1 = 22
+        "STORE REG1, [REG0]",      // Almacena REG1 en la dirección de REG0
+        "LOADI REG0, 0x00",        // REG0 = dirección a leer
+        "LOAD REG1, [REG0]",       // REG1 = valor leído (debería ser local)
+        "LOADI REG0, 0x40",        // REG0 = dirección a leer
         "LOAD REG1, [REG0]"        // REG1 = valor leído (debería ser local)
     };
     vector<string> programa_pe2 = {

@@ -8,7 +8,7 @@ using namespace std;
 
 Memoria::Memoria() {
 	memoria_principal.fill(0.0);
-    string nombre_archivo_inicializar_memoria = "mem.mif";
+    string nombre_archivo_inicializar_memoria = "cache/mem.mif";
     inicializar_memoria(nombre_archivo_inicializar_memoria);
 }
 
@@ -52,6 +52,7 @@ void Memoria::write_bloque(size_t direccion, array<double, 4> bloque) {
 // Se inicializa por medio de un .mif
 void Memoria::inicializar_memoria(string nombre_archivo_inicializar_memoria) {
 
+     
     // Se abre el archivo MIF
     ifstream file(nombre_archivo_inicializar_memoria);
 

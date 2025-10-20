@@ -85,7 +85,7 @@ optional<double> MESIController::request_line_from_bus(uint16_t address, Message
         
         cache_->update_linea_cache_mesi(address, next_state);                           // Actualiza el estado de la línea en caché
 
-        if (write_back_line.has_value()) {                                              // Si hubo write-back, envia el mensaje al interconnect
+        if (write_back_line != nullopt) {                                              // Si hubo write-back, envia el mensaje al interconnect
             cout << "[VERIF-MESI] PE " << pe_id_ << " genera WRITE_BACK para dirección " << write_back_line->direccion_bloque << endl;
             request_write_back(write_back_line->direccion_bloque, write_back_line->linea_cache);
         }
@@ -177,10 +177,10 @@ optional<array<double,4>> MESIController::handle_cache_miss_bus(const BusMessage
     if (line.has_value()) {
         if (msg.type == READ_MISS) {                                                    // Si es READ_MISS
             cout << "[VERIF-MESI] PE " << pe_id_ << " tiene línea en caché para dirección " << msg.address << " (READ_MISS), actualizando estado a SHARED y devolviendo línea..." << endl;
-            //cache_->update_linea_cache_mesi(msg.address, MESIState::SHARED);            // Actualiza estado a SHARED
+            cache_->update_linea_cache_mesi(msg.address, MESIState::SHARED);            // Actualiza estado a SHARED
         } else if (msg.type == WRITE_MISS) {
             cout << "[VERIF-MESI] PE " << pe_id_ << " tiene línea en caché para dirección " << msg.address << " (WRITE_MISS), invalidando y devolviendo línea..." << endl;
-            //cache_->update_linea_cache_mesi(msg.address, MESIState::INVALID);           // Actualiza estado a INVALID
+            cache_->update_linea_cache_mesi(msg.address, MESIState::INVALID);           // Actualiza estado a INVALID
         }
         return line;                                                                    // Retorna la línea encontrada en caché
     } else {
@@ -197,7 +197,7 @@ void MESIController::handle_invalidate_bus(const BusMessage& msg) {
     
     if (line.has_value()) {
         cout << "[VERIF-MESI] PE " << pe_id_ << " tiene línea en caché para dirección " << msg.address << ", invalidando (cambiando estado a INVALID, si se descomenta)..." << endl;
-        //cache_->update_linea_cache_mesi(msg.address, MESIState::INVALID);               // Invalida la línea en caché
+        cache_->update_linea_cache_mesi(msg.address, MESIState::INVALID);               // Invalida la línea en caché
     } else {
         cout << "[VERIF-MESI] PE " << pe_id_ << " NO tiene línea en caché para dirección " << msg.address << ", nada que invalidar." << endl;
     }

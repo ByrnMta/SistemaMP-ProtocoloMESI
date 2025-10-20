@@ -131,6 +131,11 @@ InterconnectResponse Interconnect::handle_cache_miss(const BusMessage& msg) {
             cout << "[VERIF-INTERCONNECT] Consultando MESIController de PE " << i << " por línea " << msg.address << endl;
             linea = mesi_controllers[i]->process_bus_message(msg);
             if (linea.has_value()) {
+                if (msg.type == WRITE_MISS){
+                    for (int j = i+1; j < num_pes; ++j) {
+                        mesi_controllers[j]->handle_invalidate_bus(msg); // Invalida las líneas de los caches restantes
+                    }
+                }
                 break;
             }
         }
@@ -138,8 +143,8 @@ InterconnectResponse Interconnect::handle_cache_miss(const BusMessage& msg) {
 
     if (!linea.has_value()) {
         cout << "[VERIF-INTERCONNECT] Línea NO encontrada en ningún PE, cargando de memoria principal para dirección " << msg.address << endl;
-        linea = array<double,4>{9.9,0.0,0.0,0.0}; // Línea simulada para pruebas
-        //linea = main_memory_->read_bloque(msg.address);
+        //linea = array<double,4>{9.9,0.0,0.0,0.0}; // Línea simulada para pruebas
+        linea = main_memory_->read_bloque(msg.address);
         from_memory = true;
     } else {
         cout << "[VERIF-INTERCONNECT] Línea encontrada en algún PE para dirección " << msg.address << endl;
@@ -166,7 +171,7 @@ void Interconnect::handle_invalidate(const BusMessage& msg) {
 void Interconnect::handle_write_back(const BusMessage& msg) {
     if (main_memory_) {
         cout << "[Interconnect] Recibido WRITE_BACK de PE " << msg.sender_id << " para dirección " << msg.address << endl;
-        //main_memory_->write_bloque(msg.address, msg.cache_line);
+        main_memory_->write_bloque(msg.address, msg.cache_line);
         cout << "[Interconnect] Línea escrita en memoria principal por WRITE_BACK." << endl;
     }
 }
