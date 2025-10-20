@@ -8,6 +8,9 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
+#include "cache/include/Cache.h"
+#include "../MESI/MESIController.h"
+#include "Interconnect/interconnect.h"
 
 /**
  * @brief Clase que modela un Processing Element (PE) en un sistema multiprocesador.
@@ -67,6 +70,19 @@ public:
      */
     void print_registers() const;
 
+    // ================================
+
+    // Permite conectar el MESIController al PE
+    void set_mesi_controller(class MESIController* mesi_controller) { mesi_controller_ = mesi_controller; }
+    
+    // Permite conectar la caché al PE
+    void set_cache(class Cache* cache) { cache_ = cache; }
+
+    // Permite conectar el interconnect al PE
+    void set_interconnect(class Interconnect* interconnect) { interconnect_ = interconnect; }
+    
+    // ================================
+
 private:
     /**
      * @brief Bucle principal de ejecución del PE.
@@ -104,6 +120,20 @@ private:
     std::mutex mtx_;
     std::condition_variable cv_;
     bool finished_;
+
+    // ================================
+
+    // Puntero a la caché privada (usado solo para debug o acceso directo, preferir MESIController)
+    class Cache* cache_ = nullptr;
+
+    // Puntero al MESIController
+    class MESIController* mesi_controller_ = nullptr;
+
+    // Puntero al interconnect
+    class Interconnect* interconnect_ = nullptr;
+
+    // ================================
+
 };
 
 #endif // PE_H
