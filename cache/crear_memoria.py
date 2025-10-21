@@ -1,9 +1,9 @@
 DEPTH = 512  # Tamaño total de la memoria principal
 WIDTH = 64
 
-N = 8  # Tamaño de los vectores
-A = [1, 2, 3, 4, 5, 6, 7, 8]
-B = [10, 20, 30, 40, 50, 60, 70, 80]
+N = 9  # Tamaño de los vectores
+A = [1, 2, 3, 4, 5, 6, 7, 8, 12]
+B = [10, 20, 30, 40, 50, 60, 70, 80, 1]
 partial_sums = [0, 0, 0, 0]
 
 # Cálculo de posiciones necesarias: 1 (N) + N (A) + N (B) + len(partial_sums)

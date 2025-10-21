@@ -76,20 +76,37 @@ void PE::run() {
         //cout << "[PE " << id_ << "] Ejecutando: " << instr_str << endl;
         // Lógica de salto para JNZ
         if (instr.type == Instruction::JNZ) {
-            // Por convención, REG3 es el registro de control de bucle
-            int reg_cond = 3;
+            int reg_cond = instr.reg_cond;
             if (reg_cond >= 0 && reg_cond < 8 && registers_[reg_cond] != 0) {
-                // Salta a la etiqueta si existe
                 auto it = label_map_.find(instr.label);
                 if (it != label_map_.end()) {
                     pc_ = it->second;
-                    //print_registers();
                     continue;
                 } else {
                     cout << "[PE " << id_ << "] Error: etiqueta '" << instr.label << "' no encontrada" << endl;
                 }
             }
-        } else {
+        }
+        // Lógica para CMPZ
+        else if (instr.type == Instruction::CMPZ) {
+            // Compara el registro destino con cero y actualiza REG3
+            if (instr.reg_dest >= 0 && instr.reg_dest < 8)
+                registers_[3] = (registers_[instr.reg_dest] == 0.0) ? 0.0 : 1.0;
+        }
+        // Lógica para JZ
+        else if (instr.type == Instruction::JZ) {
+            int reg_cond = instr.reg_cond;
+            if (reg_cond >= 0 && reg_cond < 8 && registers_[reg_cond] == 0) {
+                auto it = label_map_.find(instr.label);
+                if (it != label_map_.end()) {
+                    pc_ = it->second;
+                    continue;
+                } else {
+                    cout << "[PE " << id_ << "] Error: etiqueta '" << instr.label << "' no encontrada" << endl;
+                }
+            }
+        }
+        else {
             execute_instruction(instr);
         }
         //print_registers();
@@ -141,7 +158,34 @@ Instruction PE::parse_instruction(const string& instr_str) {
             instr.immediate = stoll(imm, nullptr, 16);
         else
             instr.immediate = stoll(imm);
-    } else if (op == "STORE") {
+    } else if (op == "MOV") {
+        string regd, regs;
+        iss >> regd >> regs;
+        instr.type = Instruction::MOV;
+        instr.reg_dest = stoi(regd.substr(regd.find_first_of("0123456789")));
+        instr.reg_src1 = stoi(regs.substr(regs.find_first_of("0123456789")));
+    } 
+    else if (op == "CMPZ") {
+        string reg;
+        iss >> reg;
+        instr.type = Instruction::CMPZ;
+        instr.reg_dest = stoi(reg.substr(reg.find_first_of("0123456789")));
+    } else if (op == "JZ") {
+        // JZ REGx, label
+        string reg, label;
+        iss >> reg >> label;
+        instr.type = Instruction::JZ;
+        instr.reg_cond = stoi(reg.substr(reg.find_first_of("0123456789")));
+        instr.label = label;
+    } else if (op == "JNZ") {
+        // JNZ REGx, label
+        string reg, label;
+        iss >> reg >> label;
+        instr.type = Instruction::JNZ;
+        instr.reg_cond = stoi(reg.substr(reg.find_first_of("0123456789")));
+        instr.label = label;
+    }
+    else if (op == "STORE") {
         string reg, addr;
         iss >> reg >> addr;
         instr.type = Instruction::STORE;
@@ -171,12 +215,7 @@ Instruction PE::parse_instruction(const string& instr_str) {
         iss >> reg;
         instr.type = (op == "INC") ? Instruction::INC : Instruction::DEC;
         instr.reg_dest = stoi(reg.substr(reg.find_first_of("0123456789")));
-    } else if (op == "JNZ") {
-        string label;
-        iss >> label;
-        instr.type = Instruction::JNZ;
-        instr.label = label;
-    }
+    } 
     return instr;
 }
 
@@ -189,6 +228,7 @@ void PE::execute_instruction(const Instruction& instr) {
             if (instr.reg_dest >= 0 && instr.reg_dest < 8)
                 registers_[instr.reg_dest] = static_cast<double>(instr.immediate);
             break;
+
         case Instruction::LOAD:
             // Soporte para LOAD REGx, [REGy] y LOAD REGx, dir
             if (instr.reg_dest >= 0 && instr.reg_dest < 8 && mesi_controller_) {
@@ -210,6 +250,12 @@ void PE::execute_instruction(const Instruction& instr) {
             }
             break;
 
+        case Instruction::MOV:
+            // Mueve el valor de un registro a otro
+            if (instr.reg_dest >= 0 && instr.reg_dest < 8 && instr.reg_src1 >= 0 && instr.reg_src1 < 8)
+                registers_[instr.reg_dest] = registers_[instr.reg_src1];
+            break;
+
         case Instruction::STORE:
             // Soporte para STORE REGx, [REGy] y STORE REGx, dir
             if (instr.reg_src1 >= 0 && instr.reg_src1 < 8 && mesi_controller_) {
@@ -225,24 +271,33 @@ void PE::execute_instruction(const Instruction& instr) {
             break;
 
         case Instruction::FMUL:
+            // Multiplica dos registros y almacena el resultado
             if (instr.reg_dest >= 0 && instr.reg_dest < 8 && instr.reg_src1 >= 0 && instr.reg_src1 < 8 && instr.reg_src2 >= 0 && instr.reg_src2 < 8)
                 registers_[instr.reg_dest] = registers_[instr.reg_src1] * registers_[instr.reg_src2];
             break;
+
         case Instruction::FADD:
+            // Suma dos registros y almacena el resultado
             if (instr.reg_dest >= 0 && instr.reg_dest < 8 && instr.reg_src1 >= 0 && instr.reg_src1 < 8 && instr.reg_src2 >= 0 && instr.reg_src2 < 8)
                 registers_[instr.reg_dest] = registers_[instr.reg_src1] + registers_[instr.reg_src2];
             break;
+
         case Instruction::INC:
+            // Incrementa el valor de un registro en 1
             if (instr.reg_dest >= 0 && instr.reg_dest < 8)
                 registers_[instr.reg_dest] += 1.0;
             break;
+
         case Instruction::DEC:
+            // Decrementa el valor de un registro en 1
             if (instr.reg_dest >= 0 && instr.reg_dest < 8)
                 registers_[instr.reg_dest] -= 1.0;
             break;
+
         case Instruction::JNZ:
             // La lógica de salto está en run(), aquí no se hace nada
             break;
+            
         default:
             cout << "[PE " << id_ << "] Instrucción inválida o no soportada" << endl;
     }
